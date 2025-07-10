@@ -191,39 +191,92 @@
       updateDisplay();
     }
 
-    /**
-     *  Compute missing variable using TVM formulas
-     *  Currently supports FV, PV, PMT (I and N require iterative solve – omitted for brevity)
+     /**
+     * Compute the missing TVM variable.
+     * Adds support for solving N (closed-form) and I/Y (Newton-Raphson).
      */
     function computeVar(target) {
       const { N, I, PV, PMT, FV } = vars;
-      if (I == null || N == null) {
-        alert('Set N and I/Y first.');
-        computeMode = false;
-        return;
+      const pm = PMT ?? 0;                 // treat undefined PMT as 0
+      const toNum = v => Number(v.toFixed(10));
+
+      // ---------- FV ----------
+      if (target === 'FV') {
+        if (N == null || I == null || PV == null || pm == null) {
+          alert('Set N, I/Y, PV and PMT first.'); computeMode = false; return;
+        }
+        const i = I / 100;
+        const result = -(PV * Math.pow(1 + i, N) + pm * ((Math.pow(1 + i, N) - 1) / i));
+        vars.FV = result; entry = toNum(result).toString();
       }
-      const i = I / 100;
-      let result = null;
-      if (target === 'FV' && PV != null && PMT != null) {
-        result = -(
-          PV * Math.pow(1 + i, N) +
-          PMT * ((Math.pow(1 + i, N) - 1) / i)
-        );
-      } else if (target === 'PV' && FV != null && PMT != null) {
-        result = -(
-          FV + PMT * ((Math.pow(1 + i, N) - 1) / i)
-        ) / Math.pow(1 + i, N);
-      } else if (target === 'PMT' && PV != null && FV != null) {
-        result = -(
-          FV + PV * Math.pow(1 + i, N)
-        ) * i / (Math.pow(1 + i, N) - 1);
-      } else {
-        alert('Please make sure the other four variables are set.');
-        computeMode = false;
-        return;
+
+      // ---------- PV ----------
+      else if (target === 'PV') {
+        if (N == null || I == null || FV == null || pm == null) {
+          alert('Set N, I/Y, FV and PMT first.'); computeMode = false; return;
+        }
+        const i = I / 100;
+        const result = -(FV + pm * ((Math.pow(1 + i, N) - 1) / i)) / Math.pow(1 + i, N);
+        vars.PV = result; entry = toNum(result).toString();
       }
-      vars[target] = result;
-      entry = Number(result.toFixed(10)).toString();
+
+      // ---------- PMT ----------
+      else if (target === 'PMT') {
+        if (N == null || I == null || PV == null || FV == null) {
+          alert('Set N, I/Y, PV and FV first.'); computeMode = false; return;
+        }
+        const i = I / 100;
+        const result = -(FV + PV * Math.pow(1 + i, N)) * i / (Math.pow(1 + i, N) - 1);
+        vars.PMT = result; entry = toNum(result).toString();
+      }
+
+      // ---------- N ----------
+      else if (target === 'N') {
+        if (I == null || PV == null || FV == null) {
+          alert('Set I/Y, PV and FV first.'); computeMode = false; return;
+        }
+        const i = I / 100;
+        if (pm === 0) {                                         // single-sum
+          const ratio = -FV / PV;
+          if (ratio <= 0) { alert('Invalid signs for PV and FV.'); computeMode = false; return; }
+          const result = Math.log(ratio) / Math.log(1 + i);
+          vars.N = result; entry = toNum(result).toString();
+        } else {                                                // with annuity
+          const num = -(FV * i + pm);
+          const den =  (PV * i + pm);
+          if (den === 0 || num <= 0) { alert('Invalid values for N calculation.'); computeMode = false; return; }
+          const result = Math.log(num / den) / Math.log(1 + i);
+          vars.N = result; entry = toNum(result).toString();
+        }
+      }
+
+      // ---------- I / IY ----------
+      else if (target === 'I') {
+        if (N == null || PV == null || FV == null) {
+          alert('Set N, PV and FV first.'); computeMode = false; return;
+        }
+        // Newton-Raphson on f(r) = PV(1+r)^N + PMT[(1+r)^N − 1]/r + FV
+        const f  = r => PV * Math.pow(1 + r, N) + pm * ((Math.pow(1 + r, N) - 1) / r) + FV;
+        const fp = r => PV * N * Math.pow(1 + r, N - 1) +
+                        pm * ( ((Math.pow(1 + r, N) - 1) / (r * r)) - (N * Math.pow(1 + r, N - 1) / r) );
+        let r = 0.05;                        // 5 % initial guess
+        for (let k = 0; k < 50; k++) {
+          const fr = f(r);
+          const fpr = fp(r);
+          if (Math.abs(fpr) < 1e-12) break;
+          const delta = fr / fpr;
+          r -= delta;
+          if (Math.abs(delta) < 1e-12) break;
+        }
+        const result = r * 100;              // convert to percent
+        vars.I = result; entry = toNum(result).toString();
+      }
+
+      else {
+        alert('Unknown compute target.');
+        computeMode = false; return;
+      }
+
       computeMode = false;
       updateDisplay();
     }
