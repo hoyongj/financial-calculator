@@ -106,7 +106,7 @@
       <button data-num="8">8</button>
       <button data-num="9">9</button>
       <button class="operation" data-op="+">+</button>
-      <button id="enter">ENTER</button>
+      <button id="equals">=</button>
 
       <!-- row 5 -->
       <button data-num="4">4</button>
@@ -273,8 +273,8 @@
         return;
       }
 
-      // equals / enter
-      if (btn.id === 'enter') {
+      // equals
+      if (btn.id === 'equals') {
         evaluate();
         return;
       }
