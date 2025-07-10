@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BA II Plus Web Simulator</title>
+  <style>
+    :root {
+      --bg: #202020;
+      --btn: #3b3b3b;
+      --btn-secondary: #575757;
+      --txt: #eaeaea;
+      --accent: #f4bc42;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: var(--bg);
+      color: var(--txt);
+      font-family: system-ui, sans-serif;
+    }
+
+    #calculator {
+      width: 320px;
+      background: #000;
+      padding: 1rem;
+      border-radius: 14px;
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    }
+
+    #display {
+      background: #d7ffcd;
+      color: #000;
+      font-family: 'Digital-7', monospace, sans-serif;
+      font-size: 2rem;
+      text-align: right;
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      margin-bottom: 1rem;
+      overflow: hidden;
+      white-space: nowrap;
+    }
+
+    #keys {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 0.5rem;
+    }
+
+    button {
+      appearance: none;
+      border: none;
+      border-radius: 6px;
+      padding: 0.9rem 0.4rem;
+      font-size: 0.9rem;
+      background: var(--btn);
+      color: var(--txt);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.05s ease;
+    }
+
+    button.operation {
+      background: var(--btn-secondary);
+    }
+
+    button.action {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+    }
+
+    button.wide {
+      grid-column: span 2;
+    }
+
+    button:active {
+      transform: scale(0.95);
+    }
+  </style>
+</head>
+<body>
+  <div id="calculator">
+    <div id="display">0</div>
+    <div id="keys">
+      <!-- row 1 -->
+      <button class="action" id="clr">CLR</button>
+      <button class="action" id="cpt">CPT</button>
+      <button class="operation" data-op="/">÷</button>
+      <button class="operation" data-op="*">×</button>
+      <button class="operation" data-op="-">−</button>
+
+      <!-- row 2 -->
+      <button data-set="N">N</button>
+      <button data-set="I">I/Y</button>
+      <button data-set="PV">PV</button>
+      <button data-set="PMT">PMT</button>
+      <button data-set="FV">FV</button>
+
+      <!-- row 3 (recall) -->
+      <button data-rcl="N">RCL N</button>
+      <button data-rcl="I">RCL I/Y</button>
+      <button data-rcl="PV">RCL PV</button>
+      <button data-rcl="PMT">RCL PMT</button>
+      <button data-rcl="FV">RCL FV</button>
+
+      <!-- row 4 -->
+      <button data-num="7">7</button>
+      <button data-num="8">8</button>
+      <button data-num="9">9</button>
+      <button class="operation" data-op="+">+</button>
+      <button id="enter">ENTER</button>
+
+      <!-- row 5 -->
+      <button data-num="4">4</button>
+      <button data-num="5">5</button>
+      <button data-num="6">6</button>
+      <button class="wide" id="plusminus">+/−</button>
+
+      <!-- row 6 -->
+      <button data-num="1">1</button>
+      <button data-num="2">2</button>
+      <button data-num="3">3</button>
+      <button data-num="0" class="wide">0</button>
+      <button id="dot">.</button>
+    </div>
+  </div>
+
+  <script>
+    /**
+     *  Simple BA II Plus‑style financial calculator (no statistics mode).
+     *  Supports: numeric input, basic arithmetic (+ − × ÷), sign toggle,
+     *  CLR, variable store/recall (N, I/Y, PV, PMT, FV),
+     *  and CPT of PV / FV / PMT when the other four variables are set.
+     */
+    const display = document.getElementById('display');
+    const keys = document.getElementById('keys');
+
+    // current numeric entry as string
+    let entry = '0';
+
+    // financial variables
+    const vars = { N: null, I: null, PV: null, PMT: null, FV: null };
+
+    // state for arithmetic operations
+    let firstOperand = null;
+    let operator = null;
+
+    // CPT mode flag
+    let computeMode = false;
+
+    /** Utility helpers **/
+    function updateDisplay(val = entry) {
+      display.textContent = val.toString().substring(0, 16);
+    }
+
+    function appendDigit(d) {
+      if (entry === '0' && d !== '.') {
+        entry = d;
+      } else {
+        entry += d;
+      }
+      updateDisplay();
+    }
+
+    function clearAll() {
+      entry = '0';
+      firstOperand = null;
+      operator = null;
+      computeMode = false;
+      updateDisplay();
+    }
+
+    function toggleSign() {
+      if (entry.startsWith('-')) {
+        entry = entry.slice(1);
+      } else if (entry !== '0') {
+        entry = '-' + entry;
+      }
+      updateDisplay();
+    }
+
+    function setVar(v) {
+      vars[v] = parseFloat(entry);
+      entry = '0';
+      computeMode = false;
+      updateDisplay(v + '=' + vars[v]);
+      setTimeout(() => updateDisplay(), 800);
+    }
+
+    function recallVar(v) {
+      const value = vars[v] == null ? 0 : vars[v];
+      entry = value.toString();
+      updateDisplay();
+    }
+
+    /**
+     *  Compute missing variable using TVM formulas
+     *  Currently supports FV, PV, PMT (I and N require iterative solve – omitted for brevity)
+     */
+    function computeVar(target) {
+      const { N, I, PV, PMT, FV } = vars;
+      if (I == null || N == null) {
+        alert('Set N and I/Y first.');
+        computeMode = false;
+        return;
+      }
+      const i = I / 100;
+      let result = null;
+      if (target === 'FV' && PV != null && PMT != null) {
+        result = -(
+          PV * Math.pow(1 + i, N) +
+          PMT * ((Math.pow(1 + i, N) - 1) / i)
+        );
+      } else if (target === 'PV' && FV != null && PMT != null) {
+        result = -(
+          FV + PMT * ((Math.pow(1 + i, N) - 1) / i)
+        ) / Math.pow(1 + i, N);
+      } else if (target === 'PMT' && PV != null && FV != null) {
+        result = -(
+          FV + PV * Math.pow(1 + i, N)
+        ) * i / (Math.pow(1 + i, N) - 1);
+      } else {
+        alert('Please make sure the other four variables are set.');
+        computeMode = false;
+        return;
+      }
+      vars[target] = result;
+      entry = Number(result.toFixed(10)).toString();
+      computeMode = false;
+      updateDisplay();
+    }
+
+    function handleOperation(op) {
+      if (operator && firstOperand != null) {
+        const result = eval(`${firstOperand} ${operator} ${parseFloat(entry)}`);
+        entry = result.toString();
+        updateDisplay();
+        firstOperand = result;
+      } else {
+        firstOperand = parseFloat(entry);
+      }
+      operator = op;
+      entry = '0';
+    }
+
+    function evaluate() {
+      if (!operator || firstOperand == null) return;
+      const result = eval(`${firstOperand} ${operator} ${parseFloat(entry)}`);
+      entry = result.toString();
+      updateDisplay();
+      firstOperand = null;
+      operator = null;
+    }
+
+    /** Event delegation on the keypad **/
+    keys.addEventListener('click', (e) => {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+
+      // numeric input
+      if (btn.dataset.num) {
+        appendDigit(btn.dataset.num);
+        return;
+      }
+
+      // decimal point
+      if (btn.id === 'dot') {
+        if (!entry.includes('.')) appendDigit('.');
+        return;
+      }
+
+      // arithmetic
+      if (btn.dataset.op) {
+        handleOperation(btn.dataset.op);
+        return;
+      }
+
+      // equals / enter
+      if (btn.id === 'enter') {
+        evaluate();
+        return;
+      }
+
+      // toggle sign
+      if (btn.id === 'plusminus') {
+        toggleSign();
+        return;
+      }
+
+      // clear
+      if (btn.id === 'clr') {
+        clearAll();
+        return;
+      }
+
+      // CPT button
+      if (btn.id === 'cpt') {
+        computeMode = true;
+        updateDisplay('CPT');
+        return;
+      }
+
+      // variable store or compute
+      if (btn.dataset.set) {
+        if (computeMode) {
+          computeVar(btn.dataset.set);
+        } else {
+          setVar(btn.dataset.set);
+        }
+        return;
+      }
+
+      // recall variable
+      if (btn.dataset.rcl) {
+        recallVar(btn.dataset.rcl);
+        return;
+      }
+    });
+
+    // initial display
+    updateDisplay();
+  </script>
+</body>
+</html>
