@@ -5,6 +5,8 @@
 
 # issue
 
-1. add more functions
-2. realistic button layout
-3. js html css, sep
+1. ON/OFF -> Make it real
+2. only 2nd button look yellow
+3. TVM keys look little white
+4. sto, not working
+5. ln -> LN
