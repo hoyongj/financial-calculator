@@ -1,9 +1,8 @@
-/*  BA II Plus web  •  2024-07-10
+/*  BA II Plus web  •  2024-07-10  (TVM flash fix 2025-07-10)
  *  • True ON/OFF power
  *  • Memory STO n / RCL n
  *  • 2ND toggle + indicator
- *  • TVM solver (N I/Y PV PMT FV + CPT)
- *  • Math keys: %, √x, x², 1/x, LN, yˣ (power)            */
+ *  • TVM solver (N I/Y PV PMT FV + CPT)                        */
 
 const displayText  = document.getElementById('display-text');
 const indicator2nd = document.getElementById('indicator2nd');
@@ -18,7 +17,7 @@ let firstOp   = null;   // left operand in pending arithmetic
 let operator  = null;   // pending operator (+ − × ÷ **)
 let secondFlg = false;  // 2ND pressed
 let computeFlg= false;  // CPT pressed
-let recallFlg = false;  // RCL awaiting a digit
+let recallFlg = false;  // RCL awaiting a digit/TVM key
 let storeFlg  = false;  // STO awaiting a digit
 const mem     = Array(10).fill(0);   // 10 memories 0-9
 
@@ -28,56 +27,78 @@ const show2nd = f => indicator2nd.classList.toggle('hidden', !f);
 const refresh = () => displayText.textContent = entry.toString().substring(0, 16);
 const blank   = () => (displayText.innerHTML = '&nbsp;'); // keeps line height
 
+/* --- reset timeout handle for the flash --------------------- */
+let flashTimer = null;
+
+/* ---------- power / clear ----------------------------------- */
 function powerToggle() {
   powerOn = !powerOn;
   secondFlg = computeFlg = recallFlg = storeFlg = false;
   show2nd(false);
+  clearTimeout(flashTimer);
   powerOn ? (entry = '0', refresh()) : blank();
-}
-
-function appendDigit(d) {
-  entry = (entry === '0' && d !== '.') ? d : entry + d;
-  refresh();
 }
 function clearAll() {
   entry = '0';
   firstOp = operator = null;
   secondFlg = computeFlg = recallFlg = storeFlg = false;
   show2nd(false);
+  clearTimeout(flashTimer);
+  refresh();
+}
+
+/* ---------- basic entry helpers ----------------------------- */
+function appendDigit(d) {
+  entry = (entry === '0' && d !== '.') ? d : entry + d;
   refresh();
 }
 const toggleSign = () => (entry = entry.startsWith('-') ? entry.slice(1) : '-' + entry, refresh());
-const setVar     = v => (vars[v] = parseFloat(entry), computeFlg = false, entry = '0', refresh());
-const recallVar  = v => (entry = (vars[v] ?? 0).toString(), refresh());
 
-/* ---------- TVM solver (unchanged) ---------- */
+/* ---------- TVM helpers (flash implementation) -------------- */
+const tvmLabel = { N:'N', I:'I/Y', PV:'PV', PMT:'PMT', FV:'FV' };
+
+function setVar(v) {
+  const val = parseFloat(entry);
+  vars[v] = val;
+  computeFlg = false;
+
+  /* show "I/Y=5"-style confirmation, then clear to 0 */
+  entry = `${tvmLabel[v]}=${val}`;
+  refresh();
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => { entry = '0'; refresh(); }, 1000);
+}
+function recallVar(v) {
+  entry = (vars[v] ?? 0).toString();
+  computeFlg = false;
+  refresh();
+}
+
+/* ---------- TVM solver (unchanged) --------------------------- */
 function computeVar(t) {
   const { N, I, PV, PMT, FV } = vars;
-  const pm = PMT ?? 0;
-  const need = lst => !lst.some(k => vars[k] == null) || (alert(`Set ${lst}`), false);
+  const pm  = PMT ?? 0;
   const pct = r => r / 100;
+  const need = lst => !lst.some(k => vars[k] == null) || (alert(`Set ${lst}`), false);
 
   switch (t) {
     case 'FV':
-      if (!need(['N', 'I', 'PV', 'PMT'])) return;
+      if (!need(['N','I','PV','PMT'])) return;
       vars.FV = -(PV * (1 + pct(I)) ** N + pm * (((1 + pct(I)) ** N - 1) / pct(I)));
       entry = fix(vars.FV);
       break;
-
     case 'PV':
-      if (!need(['N', 'I', 'FV', 'PMT'])) return;
+      if (!need(['N','I','FV','PMT'])) return;
       vars.PV = -(FV + pm * (((1 + pct(I)) ** N - 1) / pct(I))) / ((1 + pct(I)) ** N);
       entry = fix(vars.PV);
       break;
-
     case 'PMT':
-      if (!need(['N', 'I', 'PV', 'FV'])) return;
+      if (!need(['N','I','PV','FV'])) return;
       vars.PMT = -(FV + PV * (1 + pct(I)) ** N) * pct(I) / ((1 + pct(I)) ** N - 1);
       entry = fix(vars.PMT);
       break;
-
     case 'N':
-      if (!need(['I', 'PV', 'FV'])) return;
+      if (!need(['I','PV','FV'])) return;
       const i = pct(I);
       if (pm === 0) {
         const r = -FV / PV;
@@ -91,9 +112,8 @@ function computeVar(t) {
       }
       entry = fix(vars.N);
       break;
-
     case 'I':
-      if (!need(['N', 'PV', 'FV'])) return;
+      if (!need(['N','PV','FV'])) return;
       const f  = r => PV * (1 + r) ** N + pm * (((1 + r) ** N - 1) / r) + FV;
       const fp = r => PV * N * (1 + r) ** (N - 1) +
                       pm * (((1 + r) ** N - 1) / r ** 2 - N * (1 + r) ** (N - 1) / r);
@@ -111,9 +131,8 @@ function computeVar(t) {
   refresh();
 }
 
-/* ---------- arithmetic ---------- */
+/* ---------- arithmetic -------------------------------------- */
 function op(token) {
-  // map our "pow" token to JS exponentiation **
   const js = token === 'pow' ? '**' : token;
 
   if (operator && firstOp != null) {
@@ -133,7 +152,7 @@ function equal() {
   refresh();
 }
 
-/* ---------- keypad delegation ---------- */
+/* ---------- keypad delegation ------------------------------- */
 keys.addEventListener('click', e => {
   const b = e.target.closest('button');
   if (!b) return;
@@ -199,11 +218,18 @@ keys.addEventListener('click', e => {
     return;
   }
 
-  /* TVM store / compute --------------------------------------- */
+  /* TVM store / recall / compute ------------------------------ */
   if (b.dataset.set) {
     secondFlg = false; show2nd(false);
-    return computeFlg ? computeVar(b.dataset.set) : setVar(b.dataset.set);
+    const key = b.dataset.set;
+
+    if (recallFlg) {          // RCL followed by TVM key
+      recallVar(key);
+      recallFlg = false;
+      return;
+    }
+    return computeFlg ? computeVar(key) : setVar(key);
   }
 });
-/* ---------- boot ---------- */
+/* ---------- boot -------------------------------------------- */
 refresh();
