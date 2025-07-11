@@ -5,4 +5,4 @@
 
 # issue
 
-1. LN not working
+1. NON-FUNCTION KEYS: `▲`, `▼`, `▶`, `CF`, `NPV`, `IRR`, `(`, `)`
