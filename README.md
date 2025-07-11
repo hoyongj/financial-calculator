@@ -22,4 +22,5 @@
 git checkout publishing
 git merge main
 git push origin publishing
+git checkout main
 ```
