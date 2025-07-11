@@ -1,6 +1,10 @@
 # financial-calculator
 
-[Link here](https://hoyongj.github.io/financial-calculator)
+<a href="https://hoyongj.github.io/financial-calculator/">
+  <img src="src/calculator.png" alt="Financial Calculator" />
+</a>
+
+
 
 
 # issue
