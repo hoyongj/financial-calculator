@@ -18,7 +18,7 @@ const mem     = Array(10).fill(0);   // 10 memories 0-9
 const fix = v => Number(v.toFixed(10));
 const show2nd = f => indicator2nd.classList.toggle('hidden',!f);
 const refresh = () => displayText.textContent = entry.toString().substring(0,16);
-const blank   = () => displayText.textContent = '';
+const blank    = () => (displayText.innerHTML = '&nbsp;');   // 👈 keeps line box
 
 function powerToggle(){
   powerOn = !powerOn;
