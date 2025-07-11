@@ -4,8 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BA II Plus Web Simulator</title>
-
-    <!-- Main stylesheet -->
     <link rel="stylesheet" href="styles.css" />
   </head>
 
@@ -14,50 +12,70 @@
       <div id="display">0</div>
 
       <div id="keys">
-        <!-- row 1 -->
-        <button class="action" id="clr">CLR</button>
+        <!-- Row 1 -->
         <button class="action" id="cpt">CPT</button>
-        <button class="operation" data-op="/">÷</button>
-        <button class="operation" data-op="*">×</button>
-        <button class="operation" data-op="-">−</button>
+        <button id="enter">ENTER</button>
+        <button id="up">▲</button>
+        <button id="down">▼</button>
+        <button class="action" id="onoff">ON/OFF</button>
 
-        <!-- row 2 -->
+        <!-- Row 2 -->
+        <button class="action" id="second">2ND</button>
+        <button id="cf">CF</button>
+        <button id="npv">NPV</button>
+        <button id="irr">IRR</button>
+        <button id="right">▶</button>
+
+        <!-- Row 3 (white TVM keys) -->
         <button data-set="N">N</button>
         <button data-set="I">I/Y</button>
         <button data-set="PV">PV</button>
         <button data-set="PMT">PMT</button>
         <button data-set="FV">FV</button>
 
-        <!-- row 3 (recall) -->
-        <button data-rcl="N">RCL N</button>
-        <button data-rcl="I">RCL I/Y</button>
-        <button data-rcl="PV">RCL PV</button>
-        <button data-rcl="PMT">RCL PMT</button>
-        <button data-rcl="FV">RCL FV</button>
+        <!-- Row 4 -->
+        <button id="percent">%</button>
+        <button id="sqrt">√x</button>
+        <button id="square">x²</button>
+        <button id="recip">1/x</button>
+        <button data-op="/">÷</button>
 
-        <!-- row 4 -->
+        <!-- Row 5 -->
+        <button id="inv">INV</button>
+        <button id="lparen">(</button>
+        <button id="rparen">)</button>
+        <button id="pow">yˣ</button>
+        <button data-op="*">×</button>
+
+        <!-- Row 6 -->
+        <button id="ln">ln</button>
         <button data-num="7">7</button>
         <button data-num="8">8</button>
         <button data-num="9">9</button>
-        <button class="operation" data-op="+">+</button>
-        <button id="equals">=</button>
+        <button data-op="-">−</button>
 
-        <!-- row 5 -->
+        <!-- Row 7 -->
+        <button id="sto">STO</button>
         <button data-num="4">4</button>
         <button data-num="5">5</button>
         <button data-num="6">6</button>
-        <button class="wide" id="plusminus">+/−</button>
+        <button data-op="+">+</button>
 
-        <!-- row 6 -->
+        <!-- Row 8 -->
+        <button id="rcl">RCL</button>
         <button data-num="1">1</button>
         <button data-num="2">2</button>
         <button data-num="3">3</button>
+        <button id="equals">=</button>
+
+        <!-- Row 9 -->
+        <button id="ce">CE/C</button>
         <button data-num="0" class="wide">0</button>
         <button id="dot">.</button>
+        <button id="plusminus">+/−</button>
       </div>
     </div>
 
-    <!-- Behaviour -->
     <script src="script.js"></script>
   </body>
 </html>

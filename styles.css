@@ -6,10 +6,6 @@
   --accent: #f4bc42;
 }
 
-* {
-  box-sizing: border-box;
-}
-
 body {
   margin: 0;
   height: 100vh;
@@ -21,13 +17,12 @@ body {
   font-family: system-ui, sans-serif;
 }
 
-/* 1️⃣  Widen the whole calculator */
 #calculator {
-  width: 380px;               /* was 320px */
+  width: 380px;
   background: #000;
   padding: 1rem;
   border-radius: 14px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 12px 28px rgba(0 0 0 / .55);
 }
 
 #display {
@@ -36,7 +31,7 @@ body {
   font-family: 'Digital-7', monospace, sans-serif;
   font-size: 2rem;
   text-align: right;
-  padding: 0.6rem 0.8rem;
+  padding: .6rem .8rem;
   border-radius: 6px;
   margin-bottom: 1rem;
   overflow: hidden;
@@ -46,26 +41,23 @@ body {
 #keys {
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  gap: 0.5rem;
+  gap: .5rem;
 }
 
+/* buttons */
 button {
   appearance: none;
-  border: none;
+  border: 0;
   border-radius: 6px;
-  padding: 0.9rem 0.4rem;
-  font-size: 0.9rem;
+  padding: .9rem .4rem;
+  font-size: .9rem;
   background: var(--btn);
   color: var(--txt);
   cursor: pointer;
   user-select: none;
-  transition: transform 0.05s ease;
+  transition: transform .05s ease;
 }
-
-button.operation  { background: var(--btn-secondary); }
-button.action     { background: var(--accent); color: #000; font-weight: 600; }
-button.wide       { grid-column: span 2; }
-button:active     { transform: scale(0.95); }
-
-/* 2️⃣  Keep the decimal key anchored bottom-right */
-#dot { grid-column: 5; }
+button.operation { background: var(--btn-secondary); }
+button.action    { background: var(--accent); color:#000; font-weight:600; }
+button.wide      { grid-column: span 2; }
+button:active    { transform: scale(.95); }
