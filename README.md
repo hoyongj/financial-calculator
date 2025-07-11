@@ -14,6 +14,7 @@
 3. when value exist -> new number -> clear
 4. similarly -> TVM -> new number -> clear the display
 5. `2ND` do nothing
+6. by default, `PMT` could be zero
 
 
 # More function
