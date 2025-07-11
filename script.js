@@ -104,6 +104,15 @@ keys.addEventListener('click',e=>{
   if(b.id==='square' ){ const v=parseFloat(entry); entry=(v*v).toString(); refresh(); secondFlg=false;show2nd(false);return;}
   if(b.id==='recip'  ){ const v=parseFloat(entry); if(v!==0){entry=(1/v).toString();refresh();} secondFlg=false;show2nd(false);return;}
 
+
+  /* >>> NEW LN handler <<< */
+  if(b.id==='ln'){
+    const v=parseFloat(entry);
+    if(v<=0) { alert('LN domain error'); return; }
+    entry=Math.log(v).toString();    // natural log
+    refresh(); secondFlg=false; show2nd(false); return;
+  }
+
   /* arithmetic & misc */
   if(b.dataset.op ){ op(b.dataset.op); secondFlg=false;show2nd(false);return;}
   if(b.id==='equals'){ equal(); secondFlg=false;show2nd(false);return;}
