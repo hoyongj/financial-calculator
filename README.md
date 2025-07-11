@@ -14,3 +14,12 @@
 3. when value exist -> new number -> clear
 4. similarly -> TVM -> new number -> clear the display
 5. `2ND` do nothing
+
+
+# Updating Publish
+
+```sh
+git checkout publishing
+git merge main
+git push origin publishing
+```
