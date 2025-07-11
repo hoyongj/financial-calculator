@@ -9,75 +9,77 @@
 
 <body>
   <div id="calculator">
-    <!-- display with tiny 2ND indicator -->
+    <!-- main display (with 2ND indicator) -->
     <div id="display">
       <span id="indicator2nd" class="indicator hidden">2ND</span>
       <span id="display-text">0</span>
     </div>
 
+    <!-- keypad -------------------------------------------------- -->
     <div id="keys">
-      <!-- Row 1 --------------------------------------------------- -->
-      <button class="action" id="cpt">CPT</button>
+
+      <!-- Row 1 -->
+      <button id="cpt">CPT</button>
       <button id="enter">ENTER</button>
       <button id="up">▲</button>
       <button id="down">▼</button>
-      <button class="action" id="onoff">ON/OFF</button>
+      <button id="onoff">ON/OFF</button>
 
-      <!-- Row 2 --------------------------------------------------- -->
-      <button class="action" id="second">2ND</button>
+      <!-- Row 2 -->
+      <button id="second" class="accent">2ND</button>
       <button id="cf">CF</button>
       <button id="npv">NPV</button>
       <button id="irr">IRR</button>
       <button id="right">▶</button>
 
-      <!-- Row 3 --------------------------------------------------- -->
-      <button data-set="N">N</button>
-      <button data-set="I">I/Y</button>
-      <button data-set="PV">PV</button>
-      <button data-set="PMT">PMT</button>
-      <button data-set="FV">FV</button>
+      <!-- Row 3 (TVM – white keys) -->
+      <button data-set="N"   class="tvm">N</button>
+      <button data-set="I"   class="tvm">I/Y</button>
+      <button data-set="PV"  class="tvm">PV</button>
+      <button data-set="PMT" class="tvm">PMT</button>
+      <button data-set="FV"  class="tvm">FV</button>
 
-      <!-- Row 4 --------------------------------------------------- -->
+      <!-- Row 4 -->
       <button id="percent">%</button>
       <button id="sqrt">√x</button>
       <button id="square">x²</button>
       <button id="recip">1/x</button>
       <button data-op="/">÷</button>
 
-      <!-- Row 5 --------------------------------------------------- -->
+      <!-- Row 5 -->
       <button id="inv">INV</button>
       <button id="lparen">(</button>
       <button id="rparen">)</button>
       <button id="pow">yˣ</button>
       <button data-op="*">×</button>
 
-      <!-- Row 6 --------------------------------------------------- -->
-      <button id="ln">ln</button>
+      <!-- Row 6 -->
+      <button id="ln">LN</button>
       <button data-num="7" class="numeric">7</button>
       <button data-num="8" class="numeric">8</button>
       <button data-num="9" class="numeric">9</button>
-      <button data-op="-"  >−</button>
+      <button data-op="-" >−</button>
 
-      <!-- Row 7 --------------------------------------------------- -->
+      <!-- Row 7 -->
       <button id="sto">STO</button>
       <button data-num="4" class="numeric">4</button>
       <button data-num="5" class="numeric">5</button>
       <button data-num="6" class="numeric">6</button>
       <button data-op="+">+</button>
 
-      <!-- Row 8 --------------------------------------------------- -->
+      <!-- Row 8 -->
       <button id="rcl">RCL</button>
       <button data-num="1" class="numeric">1</button>
       <button data-num="2" class="numeric">2</button>
       <button data-num="3" class="numeric">3</button>
       <button id="equals">=</button>
 
-      <!-- Row 9 --------------------------------------------------- -->
+      <!-- Row 9 -->
       <button id="ce">CE/C</button>
       <button data-num="0" class="numeric">0</button>
-      <button id="dot"        class="numeric">.</button>
-      <button id="plusminus"  class="numeric">+/−</button>
-      <div></div> <!-- empty cell below = -->
+      <button id="dot"       class="numeric">.</button>
+      <button id="plusminus" class="numeric">+/−</button>
+      <div></div><!-- empty cell below “=” -->
     </div>
   </div>
 

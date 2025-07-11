@@ -1,178 +1,123 @@
-/**
- * BA II Plus financial calculator (no statistics mode)
- * Now with:
- *   • 2ND key back in grid + tiny indicator on display
- *   • Digits / . / ± in lighter grey
- *   • RCL-then-TVM key recall
- */
-
-const displayText = document.getElementById('display-text');
+/*  BA II Plus web – v2024-07-10
+ *  Adds: true ON/OFF power, memory (STO n / RCL n),
+ *        yellow only on 2ND, white TVM keys, LN label fix  */
+const displayText  = document.getElementById('display-text');
 const indicator2nd = document.getElementById('indicator2nd');
-const keys = document.getElementById('keys');
+const keys         = document.getElementById('keys');
 
-/* ---------- state ---------- */
-let entry = '0';
-const vars = { N:null, I:null, PV:null, PMT:null, FV:null };
-let firstOperand = null, operator = null;
-let computeMode = false;
-let secondMode  = false;
-let recallMode  = false;
+/* ---------- calculator state ---------- */
+let powerOn   = true;
+let entry     = '0';
+const vars    = { N:null,I:null,PV:null,PMT:null,FV:null };
+let firstOp   = null, operator = null;
+let secondFlg = false, computeFlg = false;
+let recallFlg = false, storeFlg  = false;
+const mem     = Array(10).fill(0);   // 10 memories 0-9
 
 /* ---------- helpers ---------- */
 const fix = v => Number(v.toFixed(10));
+const show2nd = f => indicator2nd.classList.toggle('hidden',!f);
+const refresh = () => displayText.textContent = entry.toString().substring(0,16);
+const blank   = () => displayText.textContent = '';
 
-function updateDisplay(val = entry) {
-  displayText.textContent = val.toString().substring(0, 16);
-}
-
-function show2nd(flag) {
-  indicator2nd.classList.toggle('hidden', !flag);
-}
-
-function appendDigit(d) {
-  entry = (entry === '0' && d !== '.') ? d : entry + d;
-  updateDisplay();
-}
-
-function clearAll() {
-  entry = '0';
-  firstOperand = operator = null;
-  computeMode = secondMode = recallMode = false;
+function powerToggle(){
+  powerOn = !powerOn;
+  secondFlg = computeFlg = recallFlg = storeFlg = false;
   show2nd(false);
-  updateDisplay();
+  if(powerOn){ entry='0'; refresh(); }
+  else       { blank();  }
 }
 
-function toggleSign() {
-  entry = entry.startsWith('-') ? entry.slice(1) : (entry !== '0' ? '-' + entry : entry);
-  updateDisplay();
+function appendDigit(d){
+  entry = (entry==='0' && d!=='.') ? d : entry + d;
+  refresh();
 }
-
-function setVar(v) {
-  vars[v] = parseFloat(entry);
-  entry = '0';
-  computeMode = false;
-  updateDisplay(`${v}=${vars[v]}`);
-  setTimeout(updateDisplay, 800);
+function clearAll(){
+  entry='0';firstOp=operator=null;
+  secondFlg=computeFlg=recallFlg=storeFlg=false;show2nd(false);refresh();
 }
+function toggleSign(){ entry=entry.startsWith('-')?entry.slice(1):('-'+entry); refresh(); }
+function setVar(v){ vars[v]=parseFloat(entry); computeFlg=false; entry='0'; refresh(); }
+function recallVar(v){ entry=(vars[v]??0).toString(); refresh(); }
 
-function recallVar(v) {
-  entry = (vars[v] ?? 0).toString();
-  updateDisplay();
-}
-
-/* ---------- TVM solver (unchanged from previous reply) ---------- */
-function computeVar(target) {
-  const { N,I,PV,PMT,FV } = vars;
-  const pm = PMT ?? 0;
-  const need = ns => !ns.some(k => vars[k]==null) ||
-                     (alert(`Set ${ns.join(', ')} first.`), computeMode=false);
-
-  switch (target) {
-    case 'FV':
-      if (!need(['N','I','PV','PMT'])) return;
-      vars.FV = -(PV*(1+I/100)**N + pm*(((1+I/100)**N - 1)/(I/100)));
-      entry = fix(vars.FV).toString();
-      break;
-    case 'PV':
-      if (!need(['N','I','FV','PMT'])) return;
-      vars.PV = -(FV + pm*(((1+I/100)**N - 1)/(I/100)))/((1+I/100)**N);
-      entry = fix(vars.PV).toString();
-      break;
-    case 'PMT':
-      if (!need(['N','I','PV','FV'])) return;
-      vars.PMT = -(FV + PV*(1+I/100)**N)*(I/100)/((1+I/100)**N - 1);
-      entry = fix(vars.PMT).toString();
-      break;
-    case 'N':
-      if (!need(['I','PV','FV'])) return;
-      const i = I/100;
-      if (pm === 0) {
-        const ratio = -FV/PV;
-        if (ratio <= 0) return alert('Invalid signs for PV and FV.');
-        vars.N = Math.log(ratio)/Math.log(1+i);
-      } else {
-        const num = -(FV*i + pm), den = PV*i + pm;
-        if (den===0||num<=0) return alert('Invalid values for N.');
-        vars.N = Math.log(num/den)/Math.log(1+i);
-      }
-      entry = fix(vars.N).toString();
-      break;
-    case 'I':
-      if (!need(['N','PV','FV'])) return;
-      const f  = r => PV*(1+r)**N + pm*(((1+r)**N - 1)/r) + FV;
-      const fp = r => PV*N*(1+r)**(N-1) +
-                      pm*(((1+r)**N - 1)/r**2 - N*(1+r)**(N-1)/r);
-      let r = 0.05;
-      for (let k=0;k<50;k++){ const d=f(r)/fp(r); r-=d; if(Math.abs(d)<1e-12)break;}
-      vars.I = r*100; entry = fix(vars.I).toString();
-      break;
-    default: return alert('Unknown compute target.');
+/* ---------- TVM solver (unchanged core) ---------- */
+function computeVar(t){
+  const {N,I,PV,PMT,FV} = vars, pm=PMT??0, need=l=>!l.some(k=>vars[k]==null)||alert(`Set ${l}`)&&false;
+  const pct=r=>r/100;
+  switch(t){
+    case'FV':if(!need(['N','I','PV','PMT']))return;
+      vars.FV=-(PV*(1+pct(I))**N+pm*(((1+pct(I))**N-1)/pct(I)));entry=fix(vars.FV).toString();break;
+    case'PV':if(!need(['N','I','FV','PMT']))return;
+      vars.PV=-(FV+pm*(((1+pct(I))**N-1)/pct(I)))/((1+pct(I))**N);entry=fix(vars.PV).toString();break;
+    case'PMT':if(!need(['N','I','PV','FV']))return;
+      vars.PMT=-(FV+PV*(1+pct(I))**N)*pct(I)/((1+pct(I))**N-1);entry=fix(vars.PMT).toString();break;
+    case'N':if(!need(['I','PV','FV']))return;
+      const i=pct(I);
+      if(pm===0){const r=-FV/PV;if(r<=0)return alert('Bad PV/FV');vars.N=Math.log(r)/Math.log(1+i);}
+      else{const num=-(FV*i+pm),den=PV*i+pm;if(den===0||num<=0)return alert('Bad N');
+        vars.N=Math.log(num/den)/Math.log(1+i);}
+      entry=fix(vars.N).toString();break;
+    case'I':if(!need(['N','PV','FV']))return;
+      const f=r=>PV*(1+r)**N+pm*(((1+r)**N-1)/r)+FV,
+            fp=r=>PV*N*(1+r)**(N-1)+pm*(((1+r)**N-1)/r**2-N*(1+r)**(N-1)/r);
+      let r=0.05;for(let k=0;k<50;k++){const d=f(r)/fp(r);r-=d;if(Math.abs(d)<1e-12)break;}
+      vars.I=r*100;entry=fix(vars.I).toString();break;
   }
-  computeMode=false; updateDisplay();
+  computeFlg=false;refresh();
 }
 
 /* ---------- arithmetic ---------- */
-function handleOperation(op) {
-  if (operator && firstOperand!=null) {
-    entry = eval(`${firstOperand} ${operator} ${parseFloat(entry)}`).toString();
-    firstOperand = parseFloat(entry);
-    updateDisplay();
-  } else firstOperand = parseFloat(entry);
-  operator = op; entry='0';
-}
+function op(opr){ if(operator&&firstOp!=null){entry=eval(`${firstOp}${operator}${parseFloat(entry)}`);firstOp=parseFloat(entry);refresh();}
+  else firstOp=parseFloat(entry); operator=opr; entry='0';}
+function equal(){ if(!operator||firstOp==null)return;
+  entry=eval(`${firstOp}${operator}${parseFloat(entry)}`); firstOp=operator=null; refresh();}
 
-function evaluate() {
-  if (!operator||firstOperand==null) return;
-  entry = eval(`${firstOperand} ${operator} ${parseFloat(entry)}`).toString();
-  firstOperand = operator = null;
-  updateDisplay();
-}
+/* ---------- keypad handler ---------- */
+keys.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
 
-/* ---------- keypad delegation ---------- */
-keys.addEventListener('click', e => {
-  const btn = e.target.closest('button');
-  if (!btn) return;
+  /* always let ON/OFF work */
+  if(b.id==='onoff'){ powerToggle(); return; }
+  if(!powerOn) return;                        // ignore all else if off
 
-  /* 2ND toggle -------------------------------------------------- */
-  if (btn.id === 'second') {
-    secondMode = !secondMode;
-    show2nd(secondMode);
-    return;
+  /* 2ND toggle */
+  if(b.id==='second'){ secondFlg=!secondFlg; show2nd(secondFlg); return; }
+
+  /* STO / RCL workflow */
+  if(b.id==='sto'){ storeFlg=true; return; }
+  if(b.id==='rcl'){ recallFlg=true; return; }
+
+  /* numeric key possibly for STO/RCL memory */
+  if(b.dataset.num){
+    const d=b.dataset.num|0;
+    if(storeFlg){ mem[d]=parseFloat(entry); storeFlg=false; return; }
+    if(recallFlg){ entry=mem[d].toString(); refresh(); recallFlg=false; return; }
+    appendDigit(b.dataset.num); secondFlg=false; show2nd(false); return;
   }
 
-  /* RCL two-step workflow -------------------------------------- */
-  if (btn.id === 'rcl') { recallMode = true; return; }
-  if (recallMode) {
-    recallMode = false;
-    if (btn.dataset.set) recallVar(btn.dataset.set);
-    return;
-  }
+  /* dot */
+  if(b.id==='dot'){ if(!entry.includes('.')) appendDigit('.'); secondFlg=false; show2nd(false); return; }
 
-  /* numeric ----------------------------------------------------- */
-  if (btn.dataset.num) return (secondMode=false,show2nd(false), appendDigit(btn.dataset.num));
-  if (btn.id==='dot')   { if(!entry.includes('.')) appendDigit('.'); secondMode=false; show2nd(false); return;}
+  /* percent / √x / x² / 1/x */
+  if(b.id==='percent'){ entry=(parseFloat(entry)/100).toString(); refresh(); secondFlg=false;show2nd(false);return;}
+  if(b.id==='sqrt'   ){ entry=Math.sqrt(parseFloat(entry)).toString(); refresh(); secondFlg=false;show2nd(false);return;}
+  if(b.id==='square' ){ const v=parseFloat(entry); entry=(v*v).toString(); refresh(); secondFlg=false;show2nd(false);return;}
+  if(b.id==='recip'  ){ const v=parseFloat(entry); if(v!==0){entry=(1/v).toString();refresh();} secondFlg=false;show2nd(false);return;}
 
-  /* math helpers (no 2ND funcs yet) ----------------------------- */
-  if (btn.id==='percent'){ entry=(parseFloat(entry)/100).toString(); updateDisplay(); secondMode=false; show2nd(false); return;}
-  if (btn.id==='sqrt')   { entry=Math.sqrt(parseFloat(entry)).toString(); updateDisplay(); secondMode=false; show2nd(false); return;}
-  if (btn.id==='square') { const v=parseFloat(entry); entry=(v*v).toString(); updateDisplay(); secondMode=false; show2nd(false); return;}
-  if (btn.id==='recip')  { const v=parseFloat(entry); if(v!==0){entry=(1/v).toString(); updateDisplay();} secondMode=false; show2nd(false); return;}
+  /* arithmetic & misc */
+  if(b.dataset.op ){ op(b.dataset.op); secondFlg=false;show2nd(false);return;}
+  if(b.id==='equals'){ equal(); secondFlg=false;show2nd(false);return;}
+  if(b.id==='plusminus'){ toggleSign(); secondFlg=false;show2nd(false);return;}
+  if(b.id==='ce'){ clearAll(); return; }
 
-  /* arithmetic / sign / clear ---------------------------------- */
-  if (btn.dataset.op)   { handleOperation(btn.dataset.op); secondMode=false; show2nd(false); return;}
-  if (btn.id==='equals'){ evaluate(); secondMode=false; show2nd(false); return;}
-  if (btn.id==='plusminus'){ toggleSign(); secondMode=false; show2nd(false); return;}
-  if (btn.id==='ce'||btn.id==='onoff'){ clearAll(); return;}
+  /* CPT */
+  if(b.id==='cpt'){ computeFlg=true; entry='CPT'; refresh(); secondFlg=false;show2nd(false); return;}
 
-  /* CPT --------------------------------------------------------- */
-  if (btn.id==='cpt') { computeMode=true; updateDisplay('CPT'); secondMode=false; show2nd(false); return;}
-
-  /* TVM store / compute ---------------------------------------- */
-  if (btn.dataset.set) {
-    secondMode=false; show2nd(false);
-    return computeMode ? computeVar(btn.dataset.set) : setVar(btn.dataset.set);
+  /* TVM keys */
+  if(b.dataset.set){
+    secondFlg=false;show2nd(false);
+    return computeFlg ? computeVar(b.dataset.set) : setVar(b.dataset.set);
   }
 });
-
-/* ---------- start ---------- */
-updateDisplay();
+/* ---------- boot ---------- */
+refresh();
